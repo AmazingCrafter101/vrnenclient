@@ -13,6 +13,7 @@ public final class Config {
     public static boolean showKeystrokes = true;
     public static boolean showArmor = true;
     public static boolean showPotions = true;
+    public static boolean showCoords = true;
     public static boolean toggleSprint = true;
     public static boolean fullbright = false;
     public static int zoomFov = 30; // vanilla FOV slider minimum is 30
@@ -22,6 +23,7 @@ public final class Config {
     private static final class Data {
         boolean showCps = true, showKeystrokes = true, showArmor = true, showPotions = true;
         boolean toggleSprint = true, fullbright = false;
+        boolean showCoords = true;
         int zoomFov = 30;
     }
 
@@ -37,6 +39,7 @@ public final class Config {
             if (d == null) return;
             showCps = d.showCps; showKeystrokes = d.showKeystrokes;
             showArmor = d.showArmor; showPotions = d.showPotions;
+            showCoords = d.showCoords;
             toggleSprint = d.toggleSprint; fullbright = d.fullbright;
             zoomFov = Math.max(30, Math.min(110, d.zoomFov));
         } catch (Exception e) {
@@ -49,6 +52,7 @@ public final class Config {
             Data d = new Data();
             d.showCps = showCps; d.showKeystrokes = showKeystrokes;
             d.showArmor = showArmor; d.showPotions = showPotions;
+            d.showCoords = showCoords;
             d.toggleSprint = toggleSprint; d.fullbright = fullbright;
             d.zoomFov = zoomFov;
             Files.writeString(path(), GSON.toJson(d));
