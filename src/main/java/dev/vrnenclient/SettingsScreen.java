@@ -22,36 +22,60 @@ public class SettingsScreen extends Screen {
     private static final int BG_W = 1280, BG_H = 720;
     private static final int LOGO_SIZE = 256;
     private static final int[] ZOOM_STEPS = {30, 40, 50, 60};
+    private static final String[] TAB_NAMES = {"HUD", "Combat", "Gameplay"};
 
     // layout
-    private static final int PW = 320, PH = 206;
-    private static final int COL_W = 145, ROW_H = 20, ROW_STEP = 24;
+    private static final int PW = 320, PH = 216;
+    private static final int COL_W = 145, ROW_H = 20, ROW_STEP = 24, ROWS_PER_COL = 5;
+    private static final int TAB_W = 80, TAB_H = 16;
 
-    private record Toggle(String label, BooleanSupplier get, Consumer<Boolean> set) {}
+    private record Entry(String label, BooleanSupplier get, Consumer<Boolean> set, boolean zoom) {
+        static Entry toggle(String label, BooleanSupplier get, Consumer<Boolean> set) {
+            return new Entry(label, get, set, false);
+        }
+        static Entry zoom(String label) {
+            return new Entry(label, null, null, true);
+        }
+    }
 
     private final Screen parent;
-    private final List<Toggle> left = new ArrayList<>();
-    private final List<Toggle> right = new ArrayList<>();
-    private final Map<Toggle, Float> anim = new HashMap<>();
+    private final List<List<Entry>> tabs = new ArrayList<>();
+    private final Map<Entry, Float> anim = new HashMap<>();
+    private int tab = 0;
 
     public SettingsScreen(Screen parent) {
         super(Component.literal("Vrnen Client"));
         this.parent = parent;
-        left.add(new Toggle("CPS counter", () -> Config.showCps, v -> Config.showCps = v));
-        left.add(new Toggle("Keystrokes", () -> Config.showKeystrokes, v -> Config.showKeystrokes = v));
-        left.add(new Toggle("Armor status", () -> Config.showArmor, v -> Config.showArmor = v));
-        left.add(new Toggle("Potion status", () -> Config.showPotions, v -> Config.showPotions = v));
-        left.add(new Toggle("Coordinates", () -> Config.showCoords, v -> Config.showCoords = v));
-        right.add(new Toggle("Toggle sprint", () -> Config.toggleSprint, v -> Config.toggleSprint = v));
-        right.add(new Toggle("Fullbright", () -> Config.fullbright, v -> Config.fullbright = v));
+
+        tabs.add(List.of(
+                Entry.toggle("CPS counter", () -> Config.showCps, v -> Config.showCps = v),
+                Entry.toggle("FPS", () -> Config.showFps, v -> Config.showFps = v),
+                Entry.toggle("Ping", () -> Config.showPing, v -> Config.showPing = v),
+                Entry.toggle("Coordinates", () -> Config.showCoords, v -> Config.showCoords = v),
+                Entry.toggle("Sprint status", () -> Config.showSprint, v -> Config.showSprint = v),
+                Entry.toggle("Keystrokes", () -> Config.showKeystrokes, v -> Config.showKeystrokes = v),
+                Entry.toggle("Armor status", () -> Config.showArmor, v -> Config.showArmor = v),
+                Entry.toggle("Potion status", () -> Config.showPotions, v -> Config.showPotions = v),
+                Entry.toggle("Item counter", () -> Config.showItems, v -> Config.showItems = v)));
+
+        tabs.add(List.of(
+                Entry.toggle("Combo counter", () -> Config.showCombo, v -> Config.showCombo = v),
+                Entry.toggle("Reach display", () -> Config.showReach, v -> Config.showReach = v),
+                Entry.toggle("Target HUD", () -> Config.showTarget, v -> Config.showTarget = v)));
+
+        tabs.add(List.of(
+                Entry.toggle("Toggle sprint", () -> Config.toggleSprint, v -> Config.toggleSprint = v),
+                Entry.toggle("Fullbright", () -> Config.fullbright, v -> Config.fullbright = v),
+                Entry.zoom("Zoom FOV")));
     }
 
     // ---------- geometry ----------
     private int px() { return (width - PW) / 2; }
     private int py() { return (height - PH) / 2; }
-    private int colLeftX() { return px() + 10; }
-    private int colRightX() { return px() + 165; }
-    private int rowY(int i) { return py() + 56 + i * ROW_STEP; }
+    private int tabX(int t) { return px() + 10 + t * (TAB_W + 4); }
+    private int tabY() { return py() + 40; }
+    private int entryX(int i) { return px() + 10 + (i / ROWS_PER_COL) * 155; }
+    private int entryY(int i) { return py() + 64 + (i % ROWS_PER_COL) * ROW_STEP; }
     private int doneX() { return px() + PW / 2 - 40; }
     private int doneY() { return py() + PH - 26; }
 
@@ -92,25 +116,24 @@ public class SettingsScreen extends Screen {
                 px + 42, py + 11, Theme.TEXT, true);
         g.drawString(font, "Minecraft 1.21.5", px + 42, py + 23, Theme.MUTED, true);
 
-        g.drawString(font, "HUD", colLeftX(), py + 42, Theme.ACCENT, true);
-        g.drawString(font, "GAMEPLAY", colRightX(), py + 42, Theme.ACCENT, true);
-
-        for (int i = 0; i < left.size(); i++) {
-            int y = rowY(i);
-            drawToggle(g, colLeftX(), y, left.get(i), inside(mx, my, colLeftX(), y, COL_W, ROW_H));
+        // tabs
+        for (int t = 0; t < TAB_NAMES.length; t++) {
+            int x = tabX(t), y = tabY();
+            boolean active = t == tab;
+            boolean hover = inside(mx, my, x, y, TAB_W, TAB_H);
+            Theme.rounded(g, x, y, TAB_W, TAB_H, active || hover ? Theme.PANEL_HOVER : Theme.ROW);
+            if (active) g.fill(x, y + TAB_H - 2, x + TAB_W, y + TAB_H, Theme.ACCENT);
+            String name = TAB_NAMES[t];
+            g.drawString(font, name, x + (TAB_W - font.width(name)) / 2, y + 4,
+                    active ? Theme.TEXT : Theme.MUTED, true);
         }
-        for (int i = 0; i < right.size(); i++) {
-            int y = rowY(i);
-            drawToggle(g, colRightX(), y, right.get(i), inside(mx, my, colRightX(), y, COL_W, ROW_H));
-        }
 
-        // zoom row (sits under the gameplay toggles)
-        int zy = rowY(right.size());
-        boolean zh = inside(mx, my, colRightX(), zy, COL_W, ROW_H);
-        Theme.rounded(g, colRightX(), zy, COL_W, ROW_H, zh ? Theme.PANEL_HOVER : Theme.ROW);
-        g.drawString(font, "Zoom FOV", colRightX() + 6, zy + 6, Theme.TEXT, true);
-        String zv = String.valueOf(Config.zoomFov);
-        g.drawString(font, zv, colRightX() + COL_W - 8 - font.width(zv), zy + 6, Theme.ACCENT, true);
+        // entries of the current tab
+        List<Entry> list = tabs.get(tab);
+        for (int i = 0; i < list.size(); i++) {
+            drawEntry(g, list.get(i), entryX(i), entryY(i),
+                    inside(mx, my, entryX(i), entryY(i), COL_W, ROW_H));
+        }
 
         // done button
         boolean dh = inside(mx, my, doneX(), doneY(), 80, 18);
@@ -119,14 +142,20 @@ public class SettingsScreen extends Screen {
         g.drawString(font, done, doneX() + (80 - font.width(done)) / 2, doneY() + 5, Theme.TEXT, true);
     }
 
-    private void drawToggle(GuiGraphics g, int x, int y, Toggle t, boolean hover) {
-        boolean on = t.get().getAsBoolean();
-        float a = anim.getOrDefault(t, on ? 1f : 0f);
-        a += ((on ? 1f : 0f) - a) * 0.3f;
-        anim.put(t, a);
-
+    private void drawEntry(GuiGraphics g, Entry e, int x, int y, boolean hover) {
         Theme.rounded(g, x, y, COL_W, ROW_H, hover ? Theme.PANEL_HOVER : Theme.ROW);
-        g.drawString(font, t.label(), x + 6, y + 6, Theme.TEXT, true);
+        g.drawString(font, e.label(), x + 6, y + 6, Theme.TEXT, true);
+
+        if (e.zoom()) {
+            String zv = String.valueOf(Config.zoomFov);
+            g.drawString(font, zv, x + COL_W - 8 - font.width(zv), y + 6, Theme.ACCENT, true);
+            return;
+        }
+
+        boolean on = e.get().getAsBoolean();
+        float a = anim.getOrDefault(e, on ? 1f : 0f);
+        a += ((on ? 1f : 0f) - a) * 0.3f;
+        anim.put(e, a);
 
         int sx = x + COL_W - 28, sy = y + 5;
         Theme.rounded(g, sx, sy, 22, 10, Theme.lerp(Theme.OFF, Theme.ACCENT, a));
@@ -138,23 +167,18 @@ public class SettingsScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button == 0) {
-            for (int i = 0; i < left.size(); i++) {
-                if (inside(mx, my, colLeftX(), rowY(i), COL_W, ROW_H)) {
-                    flip(left.get(i));
+            for (int t = 0; t < TAB_NAMES.length; t++) {
+                if (inside(mx, my, tabX(t), tabY(), TAB_W, TAB_H)) {
+                    tab = t;
                     return true;
                 }
             }
-            for (int i = 0; i < right.size(); i++) {
-                if (inside(mx, my, colRightX(), rowY(i), COL_W, ROW_H)) {
-                    flip(right.get(i));
+            List<Entry> list = tabs.get(tab);
+            for (int i = 0; i < list.size(); i++) {
+                if (inside(mx, my, entryX(i), entryY(i), COL_W, ROW_H)) {
+                    click(list.get(i));
                     return true;
                 }
-            }
-            if (inside(mx, my, colRightX(), rowY(right.size()), COL_W, ROW_H)) {
-                int idx = 0;
-                for (int k = 0; k < ZOOM_STEPS.length; k++) if (ZOOM_STEPS[k] == Config.zoomFov) idx = k;
-                Config.zoomFov = ZOOM_STEPS[(idx + 1) % ZOOM_STEPS.length];
-                return true;
             }
             if (inside(mx, my, doneX(), doneY(), 80, 18)) {
                 onClose();
@@ -164,8 +188,14 @@ public class SettingsScreen extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    private static void flip(Toggle t) {
-        t.set().accept(!t.get().getAsBoolean());
+    private static void click(Entry e) {
+        if (e.zoom()) {
+            int idx = 0;
+            for (int k = 0; k < ZOOM_STEPS.length; k++) if (ZOOM_STEPS[k] == Config.zoomFov) idx = k;
+            Config.zoomFov = ZOOM_STEPS[(idx + 1) % ZOOM_STEPS.length];
+        } else {
+            e.set().accept(!e.get().getAsBoolean());
+        }
     }
 
     @Override

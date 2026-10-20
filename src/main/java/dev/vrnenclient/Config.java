@@ -9,11 +9,21 @@ import java.nio.file.Path;
 
 /** Tiny JSON config stored at config/vrnenclient.json. */
 public final class Config {
+    // HUD
     public static boolean showCps = true;
+    public static boolean showFps = true;
+    public static boolean showPing = true;
+    public static boolean showCoords = true;
+    public static boolean showSprint = true;
     public static boolean showKeystrokes = true;
     public static boolean showArmor = true;
     public static boolean showPotions = true;
-    public static boolean showCoords = true;
+    public static boolean showItems = true;
+    // Combat
+    public static boolean showCombo = true;
+    public static boolean showReach = true;
+    public static boolean showTarget = true;
+    // Gameplay
     public static boolean toggleSprint = true;
     public static boolean fullbright = false;
     public static int zoomFov = 30; // vanilla FOV slider minimum is 30
@@ -21,9 +31,10 @@ public final class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final class Data {
-        boolean showCps = true, showKeystrokes = true, showArmor = true, showPotions = true;
+        boolean showCps = true, showFps = true, showPing = true, showCoords = true, showSprint = true;
+        boolean showKeystrokes = true, showArmor = true, showPotions = true, showItems = true;
+        boolean showCombo = true, showReach = true, showTarget = true;
         boolean toggleSprint = true, fullbright = false;
-        boolean showCoords = true;
         int zoomFov = 30;
     }
 
@@ -37,9 +48,11 @@ public final class Config {
             if (!Files.exists(p)) return;
             Data d = GSON.fromJson(Files.readString(p), Data.class);
             if (d == null) return;
-            showCps = d.showCps; showKeystrokes = d.showKeystrokes;
-            showArmor = d.showArmor; showPotions = d.showPotions;
-            showCoords = d.showCoords;
+            showCps = d.showCps; showFps = d.showFps; showPing = d.showPing;
+            showCoords = d.showCoords; showSprint = d.showSprint;
+            showKeystrokes = d.showKeystrokes; showArmor = d.showArmor;
+            showPotions = d.showPotions; showItems = d.showItems;
+            showCombo = d.showCombo; showReach = d.showReach; showTarget = d.showTarget;
             toggleSprint = d.toggleSprint; fullbright = d.fullbright;
             zoomFov = Math.max(30, Math.min(110, d.zoomFov));
         } catch (Exception e) {
@@ -50,9 +63,11 @@ public final class Config {
     public static void save() {
         try {
             Data d = new Data();
-            d.showCps = showCps; d.showKeystrokes = showKeystrokes;
-            d.showArmor = showArmor; d.showPotions = showPotions;
-            d.showCoords = showCoords;
+            d.showCps = showCps; d.showFps = showFps; d.showPing = showPing;
+            d.showCoords = showCoords; d.showSprint = showSprint;
+            d.showKeystrokes = showKeystrokes; d.showArmor = showArmor;
+            d.showPotions = showPotions; d.showItems = showItems;
+            d.showCombo = showCombo; d.showReach = showReach; d.showTarget = showTarget;
             d.toggleSprint = toggleSprint; d.fullbright = fullbright;
             d.zoomFov = zoomFov;
             Files.writeString(path(), GSON.toJson(d));
